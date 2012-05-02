@@ -8,7 +8,7 @@
 ** Description:
 
 Connects to the Google IMAP mail server, downloads any new Google Alert 
-messages.  Once the messages are found download them, store them and parse the
+messages.  Once the messages are downloaded we store them and parse the
 emails searching for News articles.
 
 The script will build tweets from the article and store them in a file called
@@ -51,7 +51,10 @@ EMAIL_FOLDER            = "INBOX"
 
 
 ###############################################################################
-# Bitly account information
+# Bitly account information used to shorten URLs.  You can find your Bitly 
+# account information by visiting:
+#
+# http://bitly.com/a/your_api_key
 ###############################################################################
 
 BITLY_USERNAME = ""
@@ -107,7 +110,6 @@ def main():
             log.error("Error parsing Google Alert email %s" % email_file)
             continue
         log.info("Found %i articles in Google Alert email" % len(articles))
-        time.sleep(0.5)
         new_articles += articles
     
     # Store the articles in the new_tweets.txt file so that they can
@@ -115,8 +117,14 @@ def main():
     outfile = codecs.open("new_tweets.txt", "w", "utf8")
     log.info("Found %i total articles in Google Alert emails" % len(new_articles))
     counter = 1
+    error_count = 0
     for article in new_articles:
-        short_url = bitly_api.shorten(article["link"])
+        try:
+            short_url = bitly_api.shorten(article["link"])
+        except:
+            log.error("Unable to shorten URL %s" % article["link"])
+            error_count += 1
+            continue
         tweet = build_tweet(article, short_url)
         log.info("******************* Article %i *******************" % counter)
         log.info("Article Country: %s" % article["country"])
@@ -125,8 +133,14 @@ def main():
         log.info("Tweet:           %s" % tweet)
         outfile.write("%s\n" % tweet)
         counter += 1
-        time.sleep(0.5)
-    outfile.close()                        
+        # There appears to be a limit to the number of URLs that can be shortened
+        # per minute.  Thefore we need to add a delay to prevent us from hitting
+        # that limit.
+        time.sleep(2.0)
+    outfile.close()
+    log.info("****** SUMMARY ******")
+    log.info("Articles that could be converted to tweets:     %i" % counter)
+    log.info("Articles that could not be converted to tweets: %i" % error_count)
 
 
 """
