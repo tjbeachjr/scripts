@@ -92,7 +92,7 @@ class Mailbox(object):
             raise RuntimeError, "could not retrieve msgid %r" % msgid
     
     def markAsRead(self, message):
-        self.__log.debug("Marking message %s in folder '%s' as read" % (self.__folder, message))
+        self.__log.debug("Marking message %s in folder '%s' as read" % (message, self.__folder))
         self.__server.store(message, "+FLAGS", "\Seen")
         
     def markAllAsRead(self):
