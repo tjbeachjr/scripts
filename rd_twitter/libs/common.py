@@ -12,6 +12,13 @@ Common functions used by the other libraries / scripts
 *******************************************************************************
 """
 import logging
+import smtplib
+
+"""
+setup_logger
+
+Setup the logger object
+"""
 
 def setup_logger(log_name):
     log = logging.getLogger(log_name)
@@ -21,6 +28,20 @@ def setup_logger(log_name):
     stream_handler.setFormatter(formatter)
     log.addHandler(stream_handler)
     return log
+
+
+"""
+send_email
+
+Use the Python smtplib to send an email
+"""
+
+def send_email(server_addr, from_addr, to_addrs, subject, body):
+    message = "From: %s\r\nTo: %s\r\nSubject: %s\r\n%s" % (from_addr, ",".join(to_addrs), subject, body)
+    server = smtplib.SMTP(server_addr)
+    server.sendmail(from_addr, to_addrs, message)
+    server.quit()
+
         
 country_codes = {
     "AD": "ANDORRA",
