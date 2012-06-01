@@ -25,20 +25,9 @@ import common
 # Globals
 ###############################################################################
 
-# The time to wait between tweets (in minutes)
-TWEET_WAIT_TIME = 5
+# The time to wait between tweets (in hours)
+TWEET_SHIFT = 4
 
-# The amount of time to wait before retrying a failed tweet (in seconds)
-TWEET_RETRY_TIME = 1
-
-# The number of times to retry after a tweet failure before giving up 
-TWEET_RETRY_COUNT = 10
-
-# The email addresses where the tweet failure alert will be sent
-TWEET_FAILURE_EMAILS = []
-
-# The SMTP server address for sending emails
-SMTP_SERVER = "smtp.comcast.net"
 
 ###############################################################################
 # Twitter account information for oAuthentication
@@ -62,45 +51,48 @@ def main():
     auth = tweepy.OAuthHandler(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET)
     auth.set_access_token(TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET)
     twitter_api = tweepy.API(auth)
-    
-    # Get the list helpline tweets
-    file_name = os.path.join("resources", "helpline_tweets.txt")
-    if not os.path.exists(file_name):
-        log.error("%s file is missing" % file_name)
+
+    # Get the list of articles to tweet (if any)
+    if not os.path.exists("HelplineStockTweetList.txt"):
+        log.error("HelplineStockTweetList.txt is missing!")
         return
-    infile = open(file_name, "r")
+    try:
+        infile = codecs.open("HelplineStockTweetList.txt.txt", "r", "utf8")
+    except:
+        infile = open("HelplineStockTweetList.txt", "r")
     tweets = []
     for line in infile:
         tweet = line.rstrip()
         tweets.append(tweet)
-    infile.close()
-    
-    # Tweet the helpline tweets
-    log.info("Sending %i helpline tweets" % len(tweets))
+        
+    # Tweet the articles
+    log.info("Sending %i new tweets" % len(tweets))
+    tweet = tweets.pop(0)
+    send_tweet(log, twitter_api, "Sending first tweet - Tweet contents:", tweet)
     counter = 1
-    retries = 0
+    wait_time = TWEET_SHIFT * 3600 / len(tweets)
     for tweet in tweets:
-        retries = 0
-        while True:
-            if retries > TWEET_RETRY_COUNT:
-                error_message = "Unable to send tweet %i consecutive times" % TWEET_RETRY_COUNT
-                log.error(error_message)
-                common.send_email(SMTP_SERVER, "pixelprojectteam@gmail.com", TWEET_FAILURE_EMAILS, "Automated Helpline Tweet Script Error", error_message)
-                return
-            try:
-                log.info("Sending helpline tweet %i - Tweet contents:" % counter)
-                log.info(tweet)
-                twitter_api.update_status(tweet)
-                break
-            except:
-                log.error("Problem sending helpline tweet %i.  Retrying in %i seconds..." % (counter, TWEET_RETRY_TIME))
-                retries += 1
-                time.sleep(TWEET_RETRY_TIME)
+        log.info("Waiting %i minutes before sending next tweet" % (wait_time / 60))
+        time.sleep(wait_time)
+        send_tweet(log, twitter_api, "Sending tweet %i - Tweet contents:" % counter, tweet)
         counter += 1
-        if counter == len(tweets):
-            continue
-        log.info("Waiting %i minutes before sending next helpline tweet" % wait_time)
-        time.sleep(wait_time * 60)
-    
+
+
+def send_tweet(log, twitter_api, message, tweet):
+    retry = 0
+    while True:
+        if retry > 9:
+            log.error("Maximum number of retries reached")
+            return
+        try:
+            log.info(message)
+            log.info(tweet)
+            twitter_api.update_status(tweet)
+            return
+        except:
+            log.error("Problem sending tweet. Retrying...")
+            time.sleep(5.0)
+            retry += 1
+
 if __name__ == "__main__":
     main()
