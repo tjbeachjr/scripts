@@ -114,7 +114,8 @@ def main():
     
     # Store the articles in the new_tweets.txt file so that they can
     # be tweeted later
-    outfile = codecs.open("new_tweets.txt", "w", "utf8")
+    outfile = codecs.open("new_tweets.html", "w", "utf8")
+    outfile.write("<html>\n<head></head>\n<body>\n")
     log.info("Found %i total articles in Google Alert emails" % len(new_articles))
     counter = 1
     error_count = 0
@@ -137,6 +138,7 @@ def main():
         # per minute.  Thefore we need to add a delay to prevent us from hitting
         # that limit.
         time.sleep(2.0)
+    outfile.write("</body>\n</html>")
     outfile.close()
     log.info("****** SUMMARY ******")
     log.info("Articles that could be converted to tweets:     %i" % counter)
@@ -151,8 +153,10 @@ def build_tweet(article, short_url):
     tweet = "#%s %s %s" % (article["country"], article["title"], short_url)
     if len(tweet) > 140:
         remove_chars = len(tweet) - 137
-        new_title = article["country"][:remove_chars] + "..."
-        tweet = "#%s %s %s" % (article["country"], new_title, short_url)
+        new_title = article["title"][:remove_chars] + "..."
+        tweet = "#%s %s <a href=\"%s\">%s</a></br>" % (article["country"], new_title, short_url, short_url)
+        return tweet
+    tweet = "#%s %s <a href=\"%s\" target=\"_BLANK\">%s</a></br>" % (article["country"], article["title"], short_url, short_url)
     return tweet
 
 
